@@ -1,0 +1,6 @@
+{
+  "name": "산림 인허가 신청서식 내려받기",
+  "description": "민원인이 산림 관련 인허가 신청서식을 쉽고 빠르게 검색하여 내려받고, 제출서류와 처리절차를 확인할 수 있는 공공 민원 안내 페이지입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
