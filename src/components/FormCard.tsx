@@ -3,10 +3,11 @@ import {
   ArrowRight,
   ChevronDown,
   Download,
-  ExternalLink,
+  Eye,
   FileText,
 } from 'lucide-react';
-import { ForestryForm } from '../data/forms';
+import { ForestryForm, FormFileItem } from '../data/forms';
+import { PdfPreviewModal } from './PdfPreviewModal';
 
 interface FormCardProps {
   form: ForestryForm;
@@ -14,8 +15,41 @@ interface FormCardProps {
 
 export function FormCard({ form }: FormCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FormFileItem | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const detailsId = `form-details-${form.id}`;
   const hasMultipleFiles = form.files.length > 1;
+
+  const handleDownload = async (file: FormFileItem) => {
+    setDownloadError(null);
+    try {
+      const response = await fetch(file.url);
+      if (!response.ok) {
+        throw new Error('파일을 불러오지 못했습니다.');
+      }
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = file.downloadName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch {
+      // Blob 방식이 제한된 경우 기본 링크 내려받기로 재시도
+      try {
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = file.url;
+        fallbackLink.download = file.downloadName;
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        document.body.removeChild(fallbackLink);
+      } catch {
+        setDownloadError('파일을 내려받는 중 문제가 발생했습니다. 미리보기를 이용하거나 담당부서로 문의해 주세요.');
+      }
+    }
+  };
 
   return (
     <article className="bg-white border border-[#DDD9D0] rounded-xl p-5 sm:p-7">
@@ -84,24 +118,33 @@ export function FormCard({ form }: FormCardProps) {
               <a
                 href={file.url}
                 download={file.downloadName}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void handleDownload(file);
+                }}
                 className="inline-flex items-center justify-center gap-2 min-h-[48px] px-5 py-3 rounded-lg bg-[#164E33] text-white text-base font-semibold hover:bg-[#0F3A25] transition-colors whitespace-nowrap shrink-0"
               >
                 <Download className="w-5 h-5 shrink-0" aria-hidden="true" />
                 <span>{downloadLabel}</span>
               </a>
 
-              <a
-                href={file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 min-h-[48px] px-5 py-3 rounded-lg bg-white border border-[#164E33] text-[#164E33] text-base font-semibold hover:bg-[#F1F6F3] transition-colors whitespace-nowrap shrink-0"
+              <button
+                type="button"
+                onClick={() => setPreviewFile(file)}
+                className="inline-flex items-center justify-center gap-2 min-h-[48px] px-5 py-3 rounded-lg bg-white border border-[#164E33] text-[#164E33] text-base font-semibold hover:bg-[#F1F6F3] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <ExternalLink className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>{previewLabel} (새 창)</span>
-              </a>
+                <Eye className="w-5 h-5 shrink-0" aria-hidden="true" />
+                <span>{previewLabel}</span>
+              </button>
             </div>
           );
         })}
+
+        {downloadError && (
+          <p role="alert" className="text-sm font-medium text-[#9A3412]">
+            {downloadError}
+          </p>
+        )}
       </div>
 
       {/* 펼침 영역 토글 버튼 */}
@@ -185,6 +228,19 @@ export function FormCard({ form }: FormCardProps) {
           </div>
         )}
       </div>
+
+      {/* 서식 미리보기 모달 */}
+      {previewFile && (
+        <PdfPreviewModal
+          isOpen={Boolean(previewFile)}
+          title={form.title}
+          fileUrl={previewFile.url}
+          fileFormat={previewFile.format}
+          downloadName={previewFile.downloadName}
+          onClose={() => setPreviewFile(null)}
+          onDownload={() => void handleDownload(previewFile)}
+        />
+      )}
     </article>
   );
 }

@@ -8,11 +8,28 @@ export function ContactSection() {
 
   const handleCopyAddress = async () => {
     try {
-      await navigator.clipboard.writeText(AGENCY_INFO.address);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(AGENCY_INFO.address);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2200);
     } catch {
-      // 클립보드 권한이 없는 환경에서도 오류 없이 동작
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = AGENCY_INFO.address;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2200);
+      } catch {
+        // 클립보드 권한이 제한된 환경에서도 오류 없이 동작
+      }
     }
   };
 
